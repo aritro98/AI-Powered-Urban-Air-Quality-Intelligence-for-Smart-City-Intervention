@@ -166,6 +166,19 @@ The prototype includes 5 cities, 10 real coordinate zones each:
 |----|----|
 | **Anthropic Claude API** | Attribution Agent and Advisory Agent call `reason_with_llm()` — produces real LLM-generated causal reasoning and contextual advisories instead of heuristic/template fallback. Zero code changes needed — set `ANTHROPIC_API_KEY` in `.env` and restart. |
 
+## Reliability and Runtime Design
+### Circuit breaker
+OSM Overpass is a free, shared public service that can be slow or unavailable. After 2 consecutive failures, the circuit breaker opens and all subsequent zone calls return a labeled fallback instantly. Auto-retries after a 120s cooldown.
+
+### In-memory TTL cache
+External API responses are cached for 30 minutes. This reduces latency during a demo session and improves stability when public services are rate-limited.
+
+### Parallel zone processing
+City-wide endpoints use `ThreadPoolExecutor` to process zones concurrently rather than sequentially.
+
+### LIVE / FALLBACK provenance
+Every data widget in the frontend shows a green LIVE or orange FALLBACK badge indicating whether its data came from a real API call or a seeded deterministic fallback. Nothing is hidden behind a fake real-time interface.
+
 ## Quick Start
 ### Prerequisites
 - Python 3.10+
@@ -229,19 +242,6 @@ The causal narrative ("the air is bad because a construction site 1.9km east is 
 - **Forward forecast**: Open-Meteo Air Quality API (CAMS-backed atmospheric chemical-transport model) — a genuine third-party atmospheric model, not something we wrote
 - **Backtest**: Our own Holt-Winters additive model (level + trend + 24h seasonal profile, `alpha=0.85`) trained on the 5-day real historical window and evaluated on a 24-hour holdout
 - **Comparison**: Model RMSE vs naive persistence baseline (last observed value repeated), reported honestly — including when the model loses on a sharp regime shift
-
-## Reliability Design
-### Circuit breaker
-OSM Overpass is a free, shared public service that can be slow or unavailable. After 2 consecutive failures, the circuit breaker opens and all subsequent zone calls return a labeled fallback instantly (instead of waiting out the full timeout every time). Auto-retries after a 120s cooldown.
-
-### In-memory TTL cache
-All external API responses are cached for 30 minutes. For a demo session: visit every tab once to warm the cache, then all subsequent interactions are near-instant.
-
-### Parallel zone processing
-All 10-zone endpoints (Enforcement, Validation, city overview) use `ThreadPoolExecutor` to process zones concurrently rather than sequentially — measured 10x speedup over the original sequential design.
-
-### LIVE / FALLBACK provenance
-Every data widget in the frontend shows a green LIVE or orange FALLBACK badge indicating whether its data came from a real API call or a seeded deterministic fallback. Nothing pretends to be real.
 
 ## Validation Against Published Research
 The Validation Agent compares our city-wide averaged attribution against a real, independently published source-apportionment study for each city:
