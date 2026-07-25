@@ -50,7 +50,7 @@ Uses AI to connect all of this and answer the questions city officials actually 
 That is what "reactive monitoring to proactive evidence-based intervention" means. You stop reacting to pollution after it happens and start preventing it before it peaks.
 
 ## Key Capabilities
-1. Geospatial Source Attribution
+### 1. Geospatial Source Attribution
 The Attribution Agent combines real wind bearing, OpenStreetMap land-use, traffic data, thermal anomaly signals, and station readings to estimate what is likely causing elevated pollution in a zone.
 
 It can highlight:
