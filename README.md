@@ -18,4 +18,57 @@ AQI-Sentinel is a 6-agent AI platform that fuses real monitoring station data, s
 | **Where should officials go right now?** | Enforcement Agent | Severity × confidence × exposure ranking + real Gaussian-plume dispersion + real upwind target |
 
 ## Architecture
-Refer to the [diagram](./diagram/) directory for the full workflow.
+Refer to the [diagram](./diagram/) directory to view the full architecture.
+Supporting modules: `geo_utils.py` · `models/dispersion.py` · `models/timeseries.py` · `reference_data.py`
+Reliability: `cache.py` (30-min TTL) · `circuit_breaker.py` (opens after 2 failures, 120s cooldown)
+
+## Tech Stack
+| Layer | Technology |
+|---|---|
+| Backend | Python 3.13, FastAPI, Uvicorn |
+| Agent framework | Custom multi-agent architecture (6 agents + orchestrator) |
+| Forecasting | Holt-Winters additive model (hand-implemented, no ML deps) |
+| Atmospheric modelling | Gaussian plume (Pasquill-Gifford, Briggs rural coefficients) |
+| Geospatial math | Haversine distance, compass bearing, upwind detection |
+| Frontend | Vanilla JS, Chart.js, single-file HTML |
+| External APIs | Open-Meteo, OSM Overpass, NASA FIRMS, TomTom, OpenAQ |
+| LLM hook | Anthropic Claude API (activates when key is configured) |
+
+## Cities & Zones
+5 cities, 10 real coordinate zones each:
+| City | Language | Zones |
+|---|---|---|
+| Delhi NCR | Hindi | Anand Vihar, ITO, Mundka, Wazirpur |
+| Mumbai | Marathi | Andheri East, Bandra, Worli, Chembur |
+| Kolkata | Bengali | Salt Lake, Howrah, Jadavpur, Dum Dum |
+| Bengaluru | Kannada | Whitefield, Koramangala, Peenya |
+| Chennai | Tamil | Adyar, Guindy, Ambattur, Tambaram |
+
+## Quick Start
+### Prerequisites
+- Python 3.10+
+- Internet connection (live API calls on every request)
+
+### 1. Clone / Set up the project
+```bash
+cd aqi-backend
+pip install -r requirements.txt
+```
+### 2. Configure API keys (optional but recommended)
+```bash
+cp .env
+# Edit .env and fill in your keys:
+```
+| Key | Where to get it | Without it |
+|---|---|---|
+| `NASA_FIRMS_MAP_KEY` | https://firms.modaps.eosdis.nasa.gov/api/map_key/ | Thermal anomaly count falls back to seeded estimate |
+| `TOMTOM_API_KEY` | https://developer.tomtom.com/ (free tier, 2,500 calls/day) | Traffic congestion falls back to seeded estimate |
+| `OPENAQ_API_KEY` | https://explore.openaq.org/register | Station reading falls back |
+| `ANTHROPIC_API_KEY` | https://console.anthropic.com/ | Advisories use hand-written templates instead of Claude |
+
+> **The app runs fully without the ANTHROPIC_API_KEY.** Every agent has a clearly-labeled fallback. LIVE vs FALLBACK is shown on every data widget.
+
+### 3. Start the backend
+```bash
+uvicorn main:app --reload --port 8000
+```
