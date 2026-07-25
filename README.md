@@ -166,6 +166,48 @@ The prototype includes 5 cities, 10 real coordinate zones each:
 |----|----|
 | **Anthropic Claude API** | Attribution Agent and Advisory Agent call `reason_with_llm()` — produces real LLM-generated causal reasoning and contextual advisories instead of heuristic/template fallback. Zero code changes needed — set `ANTHROPIC_API_KEY` in `.env` and restart. |
 
+## Prerequisites
+- Python 3.10+
+- Internet connection (live API calls on every request)
+
+## Installation & Setup
+1. Clone the repository:
+```bash
+git clone https://github.com/aritro98/AI-Powered-Urban-Air-Quality-Intelligence-for-Smart-City-Intervention.git
+cd aqi-backend
+pip install -r requirements.txt
+```
+2. Create a .env file and configure API keys (optional but recommended)
+```bash
+cd .env
+# Edit .env and fill in your keys:
+ANTHROPIC_API_KEY=your_anthropic_key
+OPENAQ_API_KEY=your_openaq_key
+NASA_FIRMS_MAP_KEY=your_nasa_firms_key
+TOMTOM_API_KEY=your_tomtom_key
+```
+| Key | Where to get it | Without it |
+|----|----|----|
+| `NASA_FIRMS_MAP_KEY` | https://firms.modaps.eosdis.nasa.gov/api/map_key/ | Thermal anomaly count falls back to seeded estimate |
+| `TOMTOM_API_KEY` | https://developer.tomtom.com/ (free tier, 2,500 calls/day) | Traffic congestion falls back to seeded estimate |
+| `OPENAQ_API_KEY` | https://explore.openaq.org/register | Station reading falls back |
+| `ANTHROPIC_API_KEY` | https://console.anthropic.com/ | Advisories use hand-written templates instead of Claude |
+
+> **The app runs fully without the ANTHROPIC_API_KEY.** Every agent has a clearly-labeled fallback. LIVE vs FALLBACK is shown on every data widget.
+
+3. Start the backend
+```bash
+uvicorn main:app --reload --port 8000
+```
+Confirm it's alive: http://localhost:8000/api/health → {"status":"ok","llm_enabled":false}
+
+Browse the auto-generated API docs: http://localhost:8000/docs
+
+4. Open the frontend
+Open `frontend/index.html` directly in your browser or serve it via any static server and point it to the backend at `http://localhost:8000`.
+
+The sidebar will show **backend online · heuristic mode** when the frontend connects successfully.
+
 ## Reliability and Runtime Design
 ### Circuit breaker
 OSM Overpass is a free, shared public service that can be slow or unavailable. After 2 consecutive failures, the circuit breaker opens and all subsequent zone calls return a labeled fallback instantly. Auto-retries after a 120s cooldown.
@@ -179,42 +221,17 @@ City-wide endpoints use `ThreadPoolExecutor` to process zones concurrently rathe
 ### LIVE / FALLBACK provenance
 Every data widget in the frontend shows a green LIVE or orange FALLBACK badge indicating whether its data came from a real API call or a seeded deterministic fallback. Nothing is hidden behind a fake real-time interface.
 
-## Quick Start
-### Prerequisites
-- Python 3.10+
-- Internet connection (live API calls on every request)
+## Validation Approach
+The Validation Agent compares our city-wide averaged attribution against a real, independently published source-apportionment study for each city:
+| City | Reference study |
+|----|----|
+| Delhi | Comprehensive Study on Air Pollution and GHGs in Delhi (IIT Kanpur / DPCC) |
+| Mumbai | Air Quality Assessment, Emissions Inventory & Source Apportionment (CPCB/MCGM) |
+| Kolkata | PM10/PM2.5 Source Apportionment Study & Emission Inventory (WBPCB) |
+| Bengaluru | TERI source-apportionment study (as reported by Deccan Herald) |
+| Chennai | What Makes the Indian Megacity Chennai's Air Unhealthy? (AAQR, 2024) |
 
-### 1. Clone / Set up the project
-```bash
-cd aqi-backend
-pip install -r requirements.txt
-```
-### 2. Configure API keys (optional but recommended)
-```bash
-cp .env
-# Edit .env and fill in your keys:
-```
-| Key | Where to get it | Without it |
-|---|---|---|
-| `NASA_FIRMS_MAP_KEY` | https://firms.modaps.eosdis.nasa.gov/api/map_key/ | Thermal anomaly count falls back to seeded estimate |
-| `TOMTOM_API_KEY` | https://developer.tomtom.com/ (free tier, 2,500 calls/day) | Traffic congestion falls back to seeded estimate |
-| `OPENAQ_API_KEY` | https://explore.openaq.org/register | Station reading falls back |
-| `ANTHROPIC_API_KEY` | https://console.anthropic.com/ | Advisories use hand-written templates instead of Claude |
-
-> **The app runs fully without the ANTHROPIC_API_KEY.** Every agent has a clearly-labeled fallback. LIVE vs FALLBACK is shown on every data widget.
-
-### 3. Start the backend
-```bash
-uvicorn main:app --reload --port 8000
-```
-Confirm it's alive: http://localhost:8000/api/health → {"status":"ok","llm_enabled":false}
-
-Browse the auto-generated API docs: http://localhost:8000/docs
-
-### 4. Open the frontend
-Open `frontend/index.html` directly in your browser — no build step, no server needed.
-
-The sidebar will show **"backend online · heuristic mode"** when the frontend connects successfully.
+**Honest limitation**: Published studies for the same city can disagree with each other by large margins. We only score against categories each study actually reported, and explicitly flag the rest as having no independent benchmark rather than fabricating full coverage.
 
 ## API Endpoints
 | Endpoint | What it does |
@@ -243,18 +260,6 @@ The causal narrative ("the air is bad because a construction site 1.9km east is 
 - **Backtest**: Our own Holt-Winters additive model (level + trend + 24h seasonal profile, `alpha=0.85`) trained on the 5-day real historical window and evaluated on a 24-hour holdout
 - **Comparison**: Model RMSE vs naive persistence baseline (last observed value repeated), reported honestly — including when the model loses on a sharp regime shift
 
-## Validation Against Published Research
-The Validation Agent compares our city-wide averaged attribution against a real, independently published source-apportionment study for each city:
-| City | Reference study |
-|---|---|
-| Delhi | Comprehensive Study on Air Pollution and GHGs in Delhi (IIT Kanpur / DPCC) |
-| Mumbai | Air Quality Assessment, Emissions Inventory & Source Apportionment (CPCB/MCGM) |
-| Kolkata | PM10/PM2.5 Source Apportionment Study & Emission Inventory (WBPCB) |
-| Bengaluru | TERI source-apportionment study (as reported by Deccan Herald) |
-| Chennai | What Makes the Indian Megacity Chennai's Air Unhealthy? (AAQR, 2024) |
-
-**Honest limitation**: Published studies for the same city can disagree with each other by large margins. We only score against categories each study actually reported, and explicitly flag the rest as having no independent benchmark rather than fabricating full coverage.
-
 ## Evaluation Focus Coverage
 | Criterion | Implementation |
 |---|---|
@@ -270,14 +275,6 @@ The Validation Agent compares our city-wide averaged attribution against a real,
 - **Sharp regime-shift forecasting**: The Holt-Winters model can lose to naive persistence immediately after an unpredictable pollution episode starts or clears. This is a known, honest statistical limitation, surfaced in the UI rather than hidden.
 - **Sentinel-5P / MODIS imagery**: Not yet integrated. NASA FIRMS thermal anomalies are used as a satellite proxy for biomass/burning detection.
 - **Census-tract population data**: Exposure scoring uses OSM school/hospital density as a proxy for population vulnerability rather than actual census-tract data.
-
-## Deliverables
-| Deliverable | Status |
-|---|---|
-| Working Prototype | ✅ Complete — FastAPI backend + browser frontend |
-| Architecture Diagram | ✅ Complete — PNG |
-| Presentation Deck | ✅ Complete — 10-slide PPTX |
-| Demo Video | ✅ Complete |
 
 ## Built With
 - [FastAPI](https://fastapi.tiangolo.com/)
