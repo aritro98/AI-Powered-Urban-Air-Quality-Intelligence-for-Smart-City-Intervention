@@ -19,7 +19,9 @@ AQI-Sentinel is a 6-agent AI platform that fuses real monitoring station data, s
 
 ## Architecture
 Refer to the [diagram](./diagram/) directory to view the full architecture.
+
 **Supporting modules:** `geo_utils.py`, `models/dispersion.py`, `models/timeseries.py`, `reference_data.py`
+
 **Reliability:** `cache.py` (30-min TTL), `circuit_breaker.py` (opens after 2 failures, 120s cooldown)
 
 ## Tech Stack
@@ -72,3 +74,13 @@ cp .env
 ```bash
 uvicorn main:app --reload --port 8000
 ```
+Confirm it's alive:
+http://localhost:8000/api/health → {"status":"ok","llm_enabled":false}
+
+Browse the auto-generated API docs:
+http://localhost:8000/docs
+
+### 4. Open the frontend
+Open `frontend/index.html` directly in your browser — no build step, no server needed.
+
+The sidebar will show **"backend online · heuristic mode"** when the frontend connects successfully.
