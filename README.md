@@ -67,7 +67,7 @@ It also provides:
 - explainable reasoning
 - evidence traces
 
-2. Hyperlocal AQI Forecasting
+### 2. Hyperlocal AQI Forecasting
 The Forecast Agent produces 24–72 hour AQI forecasts and compares them against a persistence baseline.
 
 Forecasting uses:
@@ -76,7 +76,7 @@ Forecasting uses:
 - Holt-Winters additive time-series logic
 - honest backtesting against a naive baseline
 
-3. Enforcement Intelligence
+### 3. Enforcement Intelligence
 The Enforcement Agent ranks zones for intervention based on:
 - pollution severity
 - source confidence
@@ -86,7 +86,7 @@ The Enforcement Agent ranks zones for intervention based on:
 
 This helps officials prioritise inspection and mitigation effort instead of dispatching teams randomly.
 
-4. Citizen Advisory
+### 4. Citizen Advisory
 The Advisory Agent generates short, actionable health guidance for the selected language.
 
 Supported languages in the current prototype:
@@ -97,7 +97,7 @@ Supported languages in the current prototype:
 - Kannada
 - Tamil
 
-5. Validation
+### 5. Validation
 The Validation Agent compares the model’s attribution output against published source-apportionment studies stored in `reference_data.py`.
 
 It reports:
@@ -105,7 +105,7 @@ It reports:
 - categories without benchmark coverage
 - mean absolute error where comparison is possible
 
-6. Response-Time Benchmarking
+### 6. Response-Time Benchmarking
 The pipeline endpoint measures end-to-end processing time across the full workflow:
 
 **Data → Attribution → Forecast → Enforcement → Advisory**
@@ -115,16 +115,21 @@ This makes the system suitable for judging not only accuracy, but also operation
 ## Architecture
 Refer to the [diagram](./diagram/) directory to view the full architecture.
 
-**Supporting modules:** `geo_utils.py`, `models/dispersion.py`, `models/timeseries.py`, `reference_data.py`
+**Core Modules:**
+- `geo_utils.py` → distance, bearing, and upwind calculations
+- `models/dispersion.py` → Gaussian plume dispersion logic
+- `models/timeseries.py` → Holt-Winters forecasting
+- `reference_data.py` → published benchmark references
+- `cache.py` → 30-minute in-memory TTL cache
+- `circuit_breaker.py` → failure isolation for slow APIs
+- `concurrency.py` → concurrent zone processing
 
-**Reliability:** `cache.py` (30-min TTL), `circuit_breaker.py` (opens after 2 failures, 120s cooldown)
-
-## Tech Stack
+## Technology Stack
 | Layer | Technology |
 |---|---|
 | Backend | Python 3.13, FastAPI, Uvicorn |
 | Agent framework | Custom multi-agent architecture (6 agents + orchestrator) |
-| Forecasting | Holt-Winters additive model (hand-implemented, no ML deps) |
+| Forecasting | Holt-Winters additive model (hand-implemented, no ML dependencies) |
 | Atmospheric modelling | Gaussian plume (Pasquill-Gifford, Briggs rural coefficients) |
 | Geospatial math | Haversine distance, compass bearing, upwind detection |
 | Frontend | Vanilla JS, Chart.js, single-file HTML |
@@ -132,9 +137,9 @@ Refer to the [diagram](./diagram/) directory to view the full architecture.
 | LLM hook | Anthropic Claude API (activates when key is configured) |
 
 ## Cities & Zones
-5 cities, 10 real coordinate zones each:
+The prototype includes 5 cities, 10 real coordinate zones each:
 | City | Language | Zones |
-|---|---|---|
+|----|----|----|
 | Delhi NCR | Hindi | Anand Vihar, RK Puram, Punjabi Bagh, Dwarka, Rohini, Okhla, ITO, Mundka, Wazirpur, Narela |
 | Mumbai | Marathi | Andheri East, Bandra, Worli, Chembur, Borivali, Powai, Dadar, Kurla, Malad, Colaba |
 | Kolkata | Bengali | Salt Lake, Howrah, Ballygunge, Behala, Jadavpur, Park Street, Rajarhat, Garia, Tollygunge,Dum Dum |
