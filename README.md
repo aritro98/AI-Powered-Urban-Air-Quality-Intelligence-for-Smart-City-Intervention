@@ -38,11 +38,11 @@ Reliability: `cache.py` (30-min TTL) · `circuit_breaker.py` (opens after 2 fail
 5 cities, 10 real coordinate zones each:
 | City | Language | Zones |
 |---|---|---|
-| Delhi NCR | Hindi | Anand Vihar, ITO, Mundka, Wazirpur |
-| Mumbai | Marathi | Andheri East, Bandra, Worli, Chembur |
-| Kolkata | Bengali | Salt Lake, Howrah, Jadavpur, Dum Dum |
-| Bengaluru | Kannada | Whitefield, Koramangala, Peenya |
-| Chennai | Tamil | Adyar, Guindy, Ambattur, Tambaram |
+| Delhi NCR | Hindi | Anand Vihar, RK Puram, Punjabi Bagh, Dwarka, Rohini, Okhla, ITO, Mundka, Wazirpur, Narela |
+| Mumbai | Marathi | Andheri East, Bandra, Worli, Chembur, Borivali, Powai, Dadar, Kurla, Malad, Colaba |
+| Kolkata | Bengali | Salt Lake, Howrah, Ballygunge, Behala, Jadavpur, Park Street, Rajarhat, Garia, Tollygunge,Dum Dum |
+| Bengaluru | Kannada | Whitefield, Indiranagar, Koramangala, Jayanagar, Electronic City, Yeshwanthpur, Hebbal, Malleshwaram, HSR Layout, Peenya |
+| Chennai | Tamil | Adyar, T Nagar, Anna Nagar, Velachery, Guindy, Perambur, Tambaram, Mylapore, Porur, Ambattur |
 
 ## Quick Start
 ### Prerequisites
