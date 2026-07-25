@@ -168,6 +168,14 @@ The prototype includes 5 cities, 10 real coordinate zones each:
 
 ## Prerequisites
 - Python 3.10+
+- [FastAPI](https://fastapi.tiangolo.com/)
+- [Open-Meteo](https://open-meteo.com/)
+- [OpenStreetMap Overpass API](https://overpass-api.de/)
+- [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/)
+- [TomTom Traffic API](https://developer.tomtom.com/)
+- [OpenAQ](https://openaq.org/)
+- [Anthropic Claude](https://www.anthropic.com/) *(LLM hook, activates with key)*
+- [Chart.js](https://www.chartjs.org/)
 - Internet connection (live API calls on every request)
 
 ## Installation & Setup
@@ -204,7 +212,7 @@ Confirm it's alive: http://localhost:8000/api/health → {"status":"ok","llm_ena
 Browse the auto-generated API docs: http://localhost:8000/docs
 
 4. Open the frontend
-Open `frontend/index.html` directly in your browser or serve it via any static server and point it to the backend at `http://localhost:8000`.
+Open `frontend/index.html` directly in your browser or serve it via any static server and point it to the backend at http://localhost:8000
 
 The sidebar will show **backend online · heuristic mode** when the frontend connects successfully.
 
@@ -257,33 +265,34 @@ The causal narrative ("the air is bad because a construction site 1.9km east is 
 
 ## How the Forecast Works (Q2 in Detail)
 - **Forward forecast**: Open-Meteo Air Quality API (CAMS-backed atmospheric chemical-transport model) — a genuine third-party atmospheric model, not something we wrote
-- **Backtest**: Our own Holt-Winters additive model (level + trend + 24h seasonal profile, `alpha=0.85`) trained on the 5-day real historical window and evaluated on a 24-hour holdout
+- **Backtest**: Our own Holt-Winters additive model (level + trend + 72h seasonal profile, `alpha=0.85`) trained on the 5-day real historical window and evaluated on a 72-hour holdout
 - **Comparison**: Model RMSE vs naive persistence baseline (last observed value repeated), reported honestly — including when the model loses on a sharp regime shift
 
 ## Evaluation Focus Coverage
 | Criterion | Implementation |
-|---|---|
+|----|----|
 | Source attribution accuracy vs emission inventories | Validation Agent — real published studies, honest MAE, partial-coverage flagging |
 | AQI forecast accuracy (RMSE vs persistence) | Forecast Agent — Holt-Winters, real historical backtest, honest reporting |
 | Enforcement recommendation quality | Enforcement Agent — real OSM targets, real dispersion, real wind |
 | Citizen advisory relevance + language coverage | Advisory Agent — 5 languages, real vulnerability layer, LLM-ready |
 | Reduction in response time: signal → intervention | Pipeline endpoint — real measured wall-clock, full 5-stage trace |
 
-## Known Limitations (stated plainly)
+## Limitations
 - **Overpass availability**: OSM Overpass is a free public service and can be slow or unavailable. The circuit breaker handles this gracefully but can't guarantee live land-use data on every request.
 - **Simplified dispersion model**: Steady-state Gaussian plume (Pasquill-Gifford rural coefficients). Real regulatory-grade models (AERMOD, CALPUFF) account for terrain and building downwash — this is genuine physics, not decorative, but not production-grade.
 - **Sharp regime-shift forecasting**: The Holt-Winters model can lose to naive persistence immediately after an unpredictable pollution episode starts or clears. This is a known, honest statistical limitation, surfaced in the UI rather than hidden.
 - **Sentinel-5P / MODIS imagery**: Not yet integrated. NASA FIRMS thermal anomalies are used as a satellite proxy for biomass/burning detection.
 - **Census-tract population data**: Exposure scoring uses OSM school/hospital density as a proxy for population vulnerability rather than actual census-tract data.
 
-## Built With
-- [FastAPI](https://fastapi.tiangolo.com/)
-- [Open-Meteo](https://open-meteo.com/)
-- [OpenStreetMap Overpass API](https://overpass-api.de/)
-- [NASA FIRMS](https://firms.modaps.eosdis.nasa.gov/)
-- [TomTom Traffic API](https://developer.tomtom.com/)
-- [OpenAQ](https://openaq.org/)
-- [Anthropic Claude](https://www.anthropic.com/) *(LLM hook, activates with key)*
-- [Chart.js](https://www.chartjs.org/)
-
-*ET AI Hackathon 2.0 — Round 2 Build Sprint · AI-Powered Urban Air Quality Intelligence for Smart City Intervention*
+## Future Scope
+Potential next steps include:
+- PostgreSQL / PostGIS persistence
+- Time-series storage
+- Richer satellite fusion
+- Additional emissions-inventory ingestion
+- Mobile-first citizen advisories
+- Push notifications and alerting
+- Docker / cloud deployment
+- Digital twin integration
+- IoT sensor expansion
+- Automated multilingual advisories at scale
