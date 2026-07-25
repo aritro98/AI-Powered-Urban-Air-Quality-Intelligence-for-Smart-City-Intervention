@@ -19,8 +19,8 @@ AQI-Sentinel is a 6-agent AI platform that fuses real monitoring station data, s
 
 ## Architecture
 Refer to the [diagram](./diagram/) directory to view the full architecture.
-Supporting modules: `geo_utils.py` · `models/dispersion.py` · `models/timeseries.py` · `reference_data.py`
-Reliability: `cache.py` (30-min TTL) · `circuit_breaker.py` (opens after 2 failures, 120s cooldown)
+**Supporting modules:** `geo_utils.py`, `models/dispersion.py`, `models/timeseries.py`, `reference_data.py`
+**Reliability:** `cache.py` (30-min TTL), `circuit_breaker.py` (opens after 2 failures, 120s cooldown)
 
 ## Tech Stack
 | Layer | Technology |
