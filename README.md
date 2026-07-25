@@ -100,21 +100,21 @@ The sidebar will show **"backend online · heuristic mode"** when the frontend c
 ### Real, keyless (always live)
 | Source | What we fetch | Used by |
 |---|---|---|
-| **Open-Meteo Weather API** | Wind speed, direction, temperature, humidity (72h forecast) | AttributionAgent, EnforcementAgent, dispersion model |
-| **Open-Meteo Air Quality API** | PM2.5, PM10, NO2, O3, US AQI — CAMS-backed forecast + 92-day history | ForecastAgent, AttributionAgent |
-| **OSM Overpass API** | Industrial zones, construction sites, schools, hospitals, major roads | AttributionAgent, AdvisoryAgent, EnforcementAgent |
+| **Open-Meteo Weather API** | Wind speed, direction, temperature, humidity (72h forecast) | Attribution Agent, Enforcement Agent, dispersion model |
+| **Open-Meteo Air Quality API** | PM2.5, PM10, NO2, O3, US AQI — CAMS-backed forecast + 92-day history | Forecast Agent, Attribution Agent |
+| **OSM Overpass API** | Industrial zones, construction sites, schools, hospitals, major roads | Attribution Agent, Advisory Agent, Enforcement Agent |
 
 ### Real, requires free key
 | Source | What we fetch | Used by |
 |---|---|---|
-| **NASA FIRMS (VIIRS SNPP NRT)** | Satellite thermal anomalies and active fires within 15km | AttributionAgent (biomass/burning signal) |
-| **TomTom Traffic Flow API** | Real-time road congestion % at zone coordinates | AttributionAgent (vehicular signal) |
-| **OpenAQ v3 API** | Nearest CAAQMS ground station reading (PM2.5) | AttributionAgent (station validation) |
+| **NASA FIRMS (VIIRS SNPP NRT)** | Satellite thermal anomalies and active fires within 15km | Attribution Agent (biomass/burning signal) |
+| **TomTom Traffic Flow API** | Real-time road congestion % at zone coordinates | Attribution Agent (vehicular signal) |
+| **OpenAQ v3 API** | Nearest CAAQMS ground station reading (PM2.5) | Attribution Agent (station validation) |
 
 ### Optional (LLM upgrade)
 | Source | What changes |
 |---|---|
-| **Anthropic Claude API** | AttributionAgent and AdvisoryAgent call `reason_with_llm()` — produces real LLM-generated causal reasoning and contextual advisories instead of heuristic/template fallback. Zero code changes needed — set `ANTHROPIC_API_KEY` in `.env` and restart. |
+| **Anthropic Claude API** | Attribution Agent and Advisory Agent call `reason_with_llm()` — produces real LLM-generated causal reasoning and contextual advisories instead of heuristic/template fallback. Zero code changes needed — set `ANTHROPIC_API_KEY` in `.env` and restart. |
 
 ## How the Attribution Works (Q1 in Detail)
 The causal narrative ("the air is bad because a construction site 1.9km east is upwind right now") is built from:
@@ -144,7 +144,7 @@ All 10-zone endpoints (Enforcement, Validation, city overview) use `ThreadPoolEx
 Every data widget in the frontend shows a green LIVE or orange FALLBACK badge indicating whether its data came from a real API call or a seeded deterministic fallback. Nothing pretends to be real.
 
 ## Validation Against Published Research
-The ValidationAgent compares our city-wide averaged attribution against a real, independently published source-apportionment study for each city:
+The Validation Agent compares our city-wide averaged attribution against a real, independently published source-apportionment study for each city:
 | City | Reference study |
 |---|---|
 | Delhi | Comprehensive Study on Air Pollution and GHGs in Delhi (IIT Kanpur / DPCC) |
@@ -158,10 +158,10 @@ The ValidationAgent compares our city-wide averaged attribution against a real, 
 ## Evaluation Focus Coverage
 | Criterion | Implementation |
 |---|---|
-| Source attribution accuracy vs emission inventories | ValidationAgent — real published studies, honest MAE, partial-coverage flagging |
-| AQI forecast accuracy (RMSE vs persistence) | ForecastAgent — Holt-Winters, real historical backtest, honest reporting |
-| Enforcement recommendation quality | EnforcementAgent — real OSM targets, real dispersion, real wind |
-| Citizen advisory relevance + language coverage | AdvisoryAgent — 5 languages, real vulnerability layer, LLM-ready |
+| Source attribution accuracy vs emission inventories | Validation Agent — real published studies, honest MAE, partial-coverage flagging |
+| AQI forecast accuracy (RMSE vs persistence) | Forecast Agent — Holt-Winters, real historical backtest, honest reporting |
+| Enforcement recommendation quality | Enforcement Agent — real OSM targets, real dispersion, real wind |
+| Citizen advisory relevance + language coverage | Advisory Agent — 5 languages, real vulnerability layer, LLM-ready |
 | Reduction in response time: signal → intervention | Pipeline endpoint — real measured wall-clock, full 5-stage trace |
 
 ## Known Limitations (stated plainly)
