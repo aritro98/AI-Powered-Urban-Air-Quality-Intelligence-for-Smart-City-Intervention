@@ -139,12 +139,32 @@ Refer to the [diagram](./diagram/) directory to view the full architecture.
 ## Cities & Zones
 The prototype includes 5 cities, 10 real coordinate zones each:
 | City | Language | Zones |
-|----|----|----|
+|------|------|------|
 | Delhi NCR | Hindi | Anand Vihar, RK Puram, Punjabi Bagh, Dwarka, Rohini, Okhla, ITO, Mundka, Wazirpur, Narela |
 | Mumbai | Marathi | Andheri East, Bandra, Worli, Chembur, Borivali, Powai, Dadar, Kurla, Malad, Colaba |
-| Kolkata | Bengali | Salt Lake, Howrah, Ballygunge, Behala, Jadavpur, Park Street, Rajarhat, Garia, Tollygunge,Dum Dum |
+| Kolkata | Bengali | Salt Lake, Howrah, Ballygunge, Behala, Jadavpur, Park Street, Rajarhat, Garia, Tollygunge, Dum Dum |
 | Bengaluru | Kannada | Whitefield, Indiranagar, Koramangala, Jayanagar, Electronic City, Yeshwanthpur, Hebbal, Malleshwaram, HSR Layout, Peenya |
 | Chennai | Tamil | Adyar, T Nagar, Anna Nagar, Velachery, Guindy, Perambur, Tambaram, Mylapore, Porur, Ambattur |
+
+## Data Sources
+### Real, keyless (always live)
+| Source | What we fetch | Used by |
+|----|----|----|
+| **Open-Meteo Weather API** | Wind speed, direction, temperature, humidity (72h forecast) | Attribution Agent, Enforcement Agent, dispersion model |
+| **Open-Meteo Air Quality API** | PM2.5, PM10, NO2, O3, US AQI — CAMS-backed forecast + 92-day history | Forecast Agent, Attribution Agent |
+| **OSM Overpass API** | Industrial zones, construction sites, schools, hospitals, major roads | Attribution Agent, Advisory Agent, Enforcement Agent |
+
+### Real, requires free key
+| Source | What we fetch | Used by |
+|----|----|----|
+| **NASA FIRMS (VIIRS SNPP NRT)** | Satellite thermal anomalies and active fires within 15km | Attribution Agent (biomass/burning signal) |
+| **TomTom Traffic Flow API** | Real-time road congestion % at zone coordinates | Attribution Agent (vehicular signal) |
+| **OpenAQ v3 API** | Nearest CAAQMS ground station reading (PM2.5) | Attribution Agent (station validation) |
+
+### Optional (LLM upgrade)
+| Source | What changes |
+|----|----|
+| **Anthropic Claude API** | Attribution Agent and Advisory Agent call `reason_with_llm()` — produces real LLM-generated causal reasoning and contextual advisories instead of heuristic/template fallback. Zero code changes needed — set `ANTHROPIC_API_KEY` in `.env` and restart. |
 
 ## Quick Start
 ### Prerequisites
@@ -195,26 +215,6 @@ The sidebar will show **"backend online · heuristic mode"** when the frontend c
 | `GET /api/city/{id}/zone/{z}/advisory?lang=` | Health advisory in regional language |
 | `GET /api/city/{id}/validation` | Attribution vs published study comparison |
 | `GET /api/city/{id}/zone/{z}/pipeline` | Full pipeline run, measured wall-clock |
-
-## Data Sources
-### Real, keyless (always live)
-| Source | What we fetch | Used by |
-|---|---|---|
-| **Open-Meteo Weather API** | Wind speed, direction, temperature, humidity (72h forecast) | Attribution Agent, Enforcement Agent, dispersion model |
-| **Open-Meteo Air Quality API** | PM2.5, PM10, NO2, O3, US AQI — CAMS-backed forecast + 92-day history | Forecast Agent, Attribution Agent |
-| **OSM Overpass API** | Industrial zones, construction sites, schools, hospitals, major roads | Attribution Agent, Advisory Agent, Enforcement Agent |
-
-### Real, requires free key
-| Source | What we fetch | Used by |
-|---|---|---|
-| **NASA FIRMS (VIIRS SNPP NRT)** | Satellite thermal anomalies and active fires within 15km | Attribution Agent (biomass/burning signal) |
-| **TomTom Traffic Flow API** | Real-time road congestion % at zone coordinates | Attribution Agent (vehicular signal) |
-| **OpenAQ v3 API** | Nearest CAAQMS ground station reading (PM2.5) | Attribution Agent (station validation) |
-
-### Optional (LLM upgrade)
-| Source | What changes |
-|---|---|
-| **Anthropic Claude API** | Attribution Agent and Advisory Agent call `reason_with_llm()` — produces real LLM-generated causal reasoning and contextual advisories instead of heuristic/template fallback. Zero code changes needed — set `ANTHROPIC_API_KEY` in `.env` and restart. |
 
 ## How the Attribution Works (Q1 in Detail)
 The causal narrative ("the air is bad because a construction site 1.9km east is upwind right now") is built from:
