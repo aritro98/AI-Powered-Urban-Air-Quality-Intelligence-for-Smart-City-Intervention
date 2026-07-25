@@ -5,7 +5,7 @@
 **Theme:** Smart Cities / Environmental Intelligence / Geospatial Analytics / Public Health
 
 ## Overview
-AQI-Sentinel is a 6-agent AI platform that fuses real monitoring station data, satellite imagery, mobility feeds, meteorological forecasts, and geospatial land-use layers to answer three questions city administrators actually need:
+AQI-Sentinel is a 6-agent AI platform that fuses real monitoring station data, satellite imagery, mobility feeds, meteorological forecasts, and geospatial land-use layers to answer these questions city administrators actually need:
 | Question | Agent | How |
 |----|----|----|
 | **Why is the air bad here, right now?** | Attribution Agent | Real wind bearing + real OSM land-use → names a specific upwind source, not a category percentage |
@@ -13,6 +13,8 @@ AQI-Sentinel is a 6-agent AI platform that fuses real monitoring station data, s
 | **Where should officials go right now?** | Enforcement Agent | Severity × confidence × exposure ranking + real Gaussian-plume dispersion + real upwind target |
 | **What should citizens be advised to do now?** | Citizen Advisory Agent | Current AQI + vulnerability layer + language-aware guidance → generates short, actionable health advice for residents and sensitive groups |
 | **How reliable is the output, and how fast was it generated?** | Validation + Response Time Agents | Published-study comparison + honest MAE + end-to-end wall-clock timing → shows confidence, benchmark coverage, and signal-to-intervention latency |
+
+**The data exists. The intelligence layer to act on it does not.**
 
 ## Problem Context
 India's air quality crisis is not a Delhi problem — it is a national urban crisis. In 2024-25, Delhi averaged an AQI of 218 (classified 'Poor' or worse for over 200 days), but the situation across other metros is nearly as severe: Mumbai recorded dangerous AQI levels on over 60 days in 2024, Kolkata averaged AQI above 150 for large parts of the winter season, and Bengaluru and Chennai — long considered relatively clean cities — have seen measurable deterioration as vehicle density and construction activity surge. CPCB's National Air Quality data for 2024 shows that 24 of India's 50 most polluted cities are Tier 1 or Tier 2 urban centres. The Lancet Planetary Health journal estimated 1.67 million premature deaths annually from air pollution in India — a public health burden that falls disproportionately on urban populations. Despite India deploying over 900 Continuous Ambient Air Quality Monitoring Stations (CAAQMS) under the National Clean Air Programme, a 2024 CAG audit found that only 31% of cities with monitoring data had any actionable multi-agency response protocols linked to those readings. The data exists. The intelligence layer to act on it does not.  City administrations need more than dashboards. They need geospatial attribution (which sources are responsible at this location, right now), predictive forecasting (what will AQI be in 24 hours at ward level), and enforcement intelligence (where to deploy inspectors for maximum impact). That combination does not exist today.
@@ -22,9 +24,24 @@ Build an AI-powered Urban Air Quality Intelligence platform that fuses monitorin
 
 In simple words:
 
-India has over 900 Continuous Ambient Air Quality Monitoring Stations (CAAQMS) deployed under the National Clean Air Programme. A 2024 CAG audit found that only 31% of cities with monitoring data had any actionable multi-agency response protocol linked to those readings.
+India has over 900 Continuous Ambient Air Quality Monitoring Stations (CAAQMS) deployed under the National Clean Air Programme. A 2024 CAG audit found that only 31% of cities with monitoring data had any actionable multi-agency response protocol linked to those readings. City officials look at these numbers and say "the air is bad today" — but they cannot do much about it because they do not know exactly why it is bad, where it is coming from, or how bad it will be tomorrow. This challenge asks you to build a platform that:
 
-**The data exists. The intelligence layer to act on it does not.**
+Takes data from multiple sources simultaneously:
+Air quality sensors — what is the AQI right now at each station
+Satellite images — where are the pollution clouds, fires, construction sites
+Traffic feeds — where are vehicles congested and emitting fumes
+Weather forecasts — wind direction, temperature, humidity affecting how pollution spreads
+Maps — where are factories, construction zones, waste burning areas located
+
+Uses AI to connect all of this and answer the questions city officials actually need:
+- Why is the air bad here right now?
+Not just "AQI is 250" but "the AQI is 250 in this ward because there is a construction site 2km upwind and the wind is blowing southeast today"
+- How bad will it be tomorrow?
+Predict AQI 24-72 hours ahead at neighbourhood level so officials can warn people and schedule interventions before the problem peaks
+- Where should officials go right now to fix it fastest?
+Instead of randomly sending inspectors — tell them "go to these three specific locations today because they are the largest contributing sources to the current pollution hotspot"
+
+That is what "reactive monitoring to proactive evidence-based intervention" means. You stop reacting to pollution after it happens and start preventing it before it peaks.
 
 ## Architecture
 Refer to the [diagram](./diagram/) directory to view the full architecture.
