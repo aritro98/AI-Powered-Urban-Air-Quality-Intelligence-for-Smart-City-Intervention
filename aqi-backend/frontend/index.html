@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AQI-Sentinel — Urban Air Quality Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0A1016; --bg2:#0E151D; --panel:#121B24; --panel2:#17222C; --panel3:#1C2833;
+  --border:#26333F; --border-soft:#1D2831;
+  --text:#E7EDF2; --text-dim:#8FA0AD; --text-faint:#5C6E7A;
+  --teal:#4FD1C5; --teal-dim:rgba(79,209,197,0.14); --teal-line:rgba(79,209,197,0.35);
+  --good:#4FD16B; --satisfactory:#A8D14F; --moderate:#F2C94C; --poor:#F2994A; --verypoor:#EB5757; --severe:#B33951;
+  --live:#4FD16B; --fallback:#F2994A;
+  --radius:10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{ background:radial-gradient(ellipse at top, #101a23 0%, var(--bg) 55%); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; -webkit-font-smoothing:antialiased; }
+.mono{font-family:'JetBrains Mono',monospace;}
+::selection{background:var(--teal-dim);}
+
+.shell{display:grid; grid-template-columns:232px 1fr; min-height:100vh;}
+.sidebar{ background:var(--bg2); border-right:1px solid var(--border-soft); padding:22px 16px; display:flex; flex-direction:column; gap:22px; position:sticky; top:0; height:100vh; }
+.brand .mark{display:flex; align-items:center; gap:9px;}
+.brand .dot{width:9px;height:9px;border-radius:2px;background:var(--teal); box-shadow:0 0 10px var(--teal);}
+.brand h1{font-size:16.5px; margin:0; font-weight:600;}
+.brand p{margin:2px 0 0; font-size:10.5px; color:var(--text-faint); letter-spacing:0.6px; text-transform:uppercase;}
+.brand .apibadge{margin-top:8px; font-size:10px; padding:4px 8px; border-radius:5px; display:inline-flex; align-items:center; gap:6px; font-family:'JetBrains Mono';}
+.dotstatus{width:7px;height:7px;border-radius:50%;}
+
+.nav{display:flex; flex-direction:column; gap:3px; margin-top:4px;}
+.nav-item{ display:flex; align-items:center; gap:10px; padding:10px 10px; border-radius:8px; color:var(--text-dim); font-size:13.5px; cursor:pointer; border:1px solid transparent; }
+.nav-item .num{font-family:'JetBrains Mono',monospace; font-size:10.5px; color:var(--text-faint); width:16px;}
+.nav-item:hover{background:var(--panel2); color:var(--text);}
+.nav-item.active{background:var(--teal-dim); color:var(--teal); border-color:var(--teal-line);}
+.nav-item.active .num{color:var(--teal);}
+.sidebar-foot{margin-top:auto; padding:12px 10px; border-top:1px solid var(--border-soft); font-size:10.5px; color:var(--text-faint); line-height:1.5;}
+
+.main{padding:20px 26px 40px; overflow-x:hidden;}
+.topbar{ display:flex; align-items:center; justify-content:space-between; gap:18px; padding:14px 18px; background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius); margin-bottom:16px; flex-wrap:wrap; }
+.city-select select{ background:var(--panel3); color:var(--text); border:1px solid var(--border); padding:8px 12px; border-radius:7px; font-family:'Inter'; font-size:13.5px; font-weight:500; }
+.badge-aqi{display:flex; align-items:center; gap:10px;}
+.badge-aqi .val{font-family:'Space Grotesk'; font-size:26px; font-weight:700; line-height:1;}
+.badge-aqi .lbl{display:flex; flex-direction:column;}
+.badge-aqi .lbl span:first-child{font-size:9.5px; text-transform:uppercase; letter-spacing:0.8px; color:var(--text-faint);}
+.badge-aqi .lbl span:last-child{font-size:12.5px; font-weight:600;}
+.chip{padding:3px 9px; border-radius:100px; font-size:11px; font-weight:600;}
+.provenance{display:inline-flex; align-items:center; gap:5px; font-size:10px; padding:2px 8px; border-radius:100px; font-family:'JetBrains Mono'; border:1px solid var(--border);}
+.provenance.live{color:var(--live); border-color:var(--live);}
+.provenance.fallback{color:var(--fallback); border-color:var(--fallback);}
+
+.grid2{display:grid; grid-template-columns:1.3fr 1fr; gap:16px;}
+.grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+.panel{background:var(--panel); border:1px solid var(--border-soft); border-radius:var(--radius); padding:18px;}
+.panel h2{font-family:'Space Grotesk'; font-size:15px; margin:0 0 3px; font-weight:600;}
+.panel .desc{font-size:12px; color:var(--text-faint); margin:0 0 14px; line-height:1.5;}
+.panel .row-between{display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;}
+
+.wardmap{display:grid; grid-template-columns:repeat(5,1fr); gap:8px;}
+.ward-cell{ border-radius:8px; padding:10px 8px; cursor:pointer; border:1px solid var(--border); transition:transform .12s; position:relative; }
+.ward-cell:hover{transform:translateY(-2px);}
+.ward-cell.selected{border-color:var(--teal); box-shadow:0 0 0 1px var(--teal);}
+.ward-cell .wname{font-size:11px; font-weight:600; color:#0A1016; opacity:0.85;}
+.ward-cell .waqi{font-family:'JetBrains Mono'; font-size:18px; font-weight:700; color:#0A1016; margin-top:10px;}
+.ward-cell .wtag{font-size:9px; color:#0A1016; opacity:0.65; margin-top:2px;}
+.legend{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; font-size:10.5px; color:var(--text-dim);}
+.legend span{display:inline-flex; align-items:center; gap:5px;}
+.legend i{width:9px;height:9px;border-radius:2px;display:inline-block;}
+
+.src-bar{display:flex; align-items:center; gap:10px; margin-bottom:10px;}
+.src-bar .name{width:150px; font-size:12px; color:var(--text-dim);}
+.src-bar .track{flex:1; height:9px; background:var(--panel3); border-radius:6px; overflow:hidden;}
+.src-bar .fill{height:100%; border-radius:6px;}
+.src-bar .pct{width:56px; text-align:right; font-family:'JetBrains Mono'; font-size:12px; color:var(--text);}
+.src-bar .conf{width:70px; text-align:right; font-family:'JetBrains Mono'; font-size:10.5px; color:var(--text-faint);}
+
+.stat{background:var(--panel2); border:1px solid var(--border-soft); border-radius:8px; padding:12px 14px;}
+.stat .k{font-size:10.5px; color:var(--text-faint); text-transform:uppercase; letter-spacing:0.5px;}
+.stat .v{font-family:'Space Grotesk'; font-size:22px; font-weight:700; margin-top:3px;}
+.stat .d{font-size:11px; color:var(--text-dim); margin-top:2px;}
+
+table{width:100%; border-collapse:collapse; font-size:12.5px;}
+th{text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-faint); font-weight:600; padding:8px 10px; border-bottom:1px solid var(--border);}
+td{padding:10px 10px; border-bottom:1px solid var(--border-soft); vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+.rank{width:24px; height:24px; border-radius:6px; background:var(--panel3); display:inline-flex; align-items:center; justify-content:center; font-family:'JetBrains Mono'; font-size:11px; color:var(--teal); font-weight:600;}
+.evidence-chip{display:inline-block; background:var(--panel3); border:1px solid var(--border); border-radius:5px; padding:2px 7px; font-size:10px; color:var(--text-dim); margin:1px 3px 1px 0; font-family:'JetBrains Mono';}
+
+.tabcontent{display:none;}
+.tabcontent.active{display:block;}
+
+.lang-toggle{display:flex; gap:6px; flex-wrap:wrap;}
+.lang-toggle button{ background:var(--panel3); border:1px solid var(--border); color:var(--text-dim); padding:6px 11px; border-radius:6px; font-size:12px; cursor:pointer; font-family:'Inter'; }
+.lang-toggle button.active{background:var(--teal-dim); border-color:var(--teal); color:var(--teal);}
+.advisory-card{background:var(--panel2); border-left:3px solid var(--teal); border-radius:0 8px 8px 0; padding:16px 18px; margin-top:12px;}
+.advisory-card .msg{font-size:16px; line-height:1.6; font-weight:500;}
+.advisory-card .meta{margin-top:10px; font-size:11px; color:var(--text-faint); display:flex; gap:16px; flex-wrap:wrap; align-items:center;}
+
+/* Agent trace console */
+.trace-console{ background:#080D12; border:1px solid var(--border-soft); border-radius:8px; padding:12px 14px; margin-top:14px; max-height:220px; overflow-y:auto; font-family:'JetBrains Mono'; font-size:10.8px; line-height:1.7; }
+.trace-line{display:flex; gap:8px; white-space:pre-wrap; word-break:break-word;}
+.trace-line .agent-tag{color:var(--teal); flex-shrink:0;}
+.trace-line .src-live{color:var(--live);}
+.trace-line .src-fallback{color:var(--fallback);}
+.trace-line .src-internal{color:var(--text-faint);}
+.trace-line .src-not_configured{color:var(--text-dim);}
+.loading-inline{color:var(--text-faint); font-size:12px;}
+
+.section-title{display:flex; align-items:center; gap:8px; margin-bottom:14px; justify-content:space-between; flex-wrap:wrap;}
+.section-title h2{margin:0; font-family:'Space Grotesk'; font-size:18px; font-weight:600;}
+.section-title p{margin:0; font-size:12px; color:var(--text-faint);}
+.eyebrow{font-size:10.5px; text-transform:uppercase; letter-spacing:1px; color:var(--teal); font-family:'JetBrains Mono'; font-weight:600;}
+.notebar{margin-top:18px; font-size:11px; color:var(--text-faint); border-top:1px solid var(--border-soft); padding-top:12px; line-height:1.6;}
+
+@media (max-width:980px){
+  .shell{grid-template-columns:1fr;}
+  .grid2{grid-template-columns:1fr;}
+  .grid3{grid-template-columns:1fr;}
+  .wardmap{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand">
+      <div class="mark"><span class="dot"></span><h1>AQI&#8209;Sentinel</h1></div>
+      <p>Urban Air Intelligence</p>
+      <div class="apibadge mono" id="apiStatusBadge" style="background:var(--panel3); color:var(--text-faint);">
+        <span class="dotstatus" style="background:var(--text-faint);"></span> checking backend…
+      </div>
+    </div>
+    <div class="nav" id="nav">
+      <div class="nav-item active" data-tab="attribution"><span class="num">01</span> Source Attribution</div>
+      <div class="nav-item" data-tab="forecast"><span class="num">02</span> Hyperlocal Forecast</div>
+      <div class="nav-item" data-tab="enforcement"><span class="num">03</span> Enforcement Priority</div>
+      <div class="nav-item" data-tab="advisory"><span class="num">04</span> Citizen Advisory</div>
+      <div class="nav-item" data-tab="validation"><span class="num">05</span> Ground-Truth Validation</div>
+      <div class="nav-item" data-tab="pipeline"><span class="num">06</span> Response Time</div>
+    </div>
+    <div class="sidebar-foot">
+      Every panel is fetched live from the FastAPI backend, which calls 5 real public APIs (weather, air quality, land-use, satellite, traffic, ground stations) with graceful fallback and a circuit breaker for sustained outages. Watch the Agent Trace console on each tab.
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="city-select"><select id="citySelect"></select></div>
+      <div class="badge-aqi">
+        <div class="val mono" id="topAqiVal">--</div>
+        <div class="lbl"><span>Live City AQI</span><span id="topAqiCat">—</span></div>
+        <span class="chip" id="topAqiChip">—</span>
+      </div>
+      <div id="topProvenance"></div>
+    </div>
+
+    <!-- TAB: ATTRIBUTION -->
+    <div class="tabcontent active" id="tab-attribution">
+      <div class="section-title">
+        <div><div class="eyebrow">Agent 01</div><h2>Geospatial Pollution Source Attribution</h2>
+        <p>Real land-use + pollutant-ratio signals per zone, decomposed into source categories.</p></div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="row-between"><h2 style="margin:0;">Zone Grid — <span id="attCityName"></span></h2></div>
+          <div class="wardmap" id="wardMap"><div class="loading-inline">Loading zones…</div></div>
+          <div class="legend">
+            <span><i style="background:var(--good)"></i>Good</span><span><i style="background:var(--satisfactory)"></i>Satisfactory</span>
+            <span><i style="background:var(--moderate)"></i>Moderate</span><span><i style="background:var(--poor)"></i>Poor</span>
+            <span><i style="background:var(--verypoor)"></i>Very Poor</span><span><i style="background:var(--severe)"></i>Severe</span>
+          </div>
+        </div>
+        <div class="panel">
+          <h2 id="attWardTitle">Select a zone</h2>
+          <div id="attWardSub" style="margin:0 0 14px;"></div>
+          <div id="srcBars" class="loading-inline">—</div>
+          <div class="trace-console" id="attTrace"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: FORECAST -->
+    <div class="tabcontent" id="tab-forecast">
+      <div class="section-title">
+        <div><div class="eyebrow">Agent 02</div><h2>Hyperlocal Predictive AQI Forecasting</h2>
+        <p>Forecast sourced from Open-Meteo (CAMS-backed atmospheric model); backtest RMSE computed on real historical AQI vs. persistence.</p></div>
+      </div>
+      <div class="grid3" style="margin-bottom:16px;">
+        <div class="stat"><div class="k">Model RMSE</div><div class="v" id="fcRmseModel">—</div><div class="d" id="fcModelLabel">Holt-Winters (level+trend+seasonal)</div></div>
+        <div class="stat"><div class="k">Persistence Baseline RMSE</div><div class="v" id="fcRmseBase">—</div><div class="d">Naive "tomorrow = today"</div></div>
+        <div class="stat"><div class="k">Improvement</div><div class="v" id="fcImprove" style="color:var(--teal);">—</div><div class="d">On real historical backtest window</div></div>
+      </div>
+      <div class="panel">
+        <div class="row-between">
+          <h2 style="margin:0;">72h Forecast — <span id="fcWardName"></span></h2>
+          <select id="fcWardSelect"></select>
+        </div>
+        <canvas id="fcChart" height="90"></canvas>
+        <div class="trace-console" id="fcTrace"></div>
+      </div>
+    </div>
+
+    <!-- TAB: ENFORCEMENT -->
+    <div class="tabcontent" id="tab-enforcement">
+      <div class="section-title">
+        <div><div class="eyebrow">Agent 03</div><h2>Enforcement Intelligence &amp; Prioritisation</h2>
+        <p>Ranked by severity × source confidence × exposure, with a real Gaussian-plume dispersion estimate using live wind data.</p></div>
+      </div>
+      <div class="panel">
+        <div class="loading-inline" id="enfLoading">Loading — this calls the real APIs for all 10 zones, can take a few seconds…</div>
+        <table id="enfTableWrap" style="display:none;">
+          <thead><tr><th>Rank</th><th>Zone</th><th>Score</th><th>Primary Source</th><th>Dispersion (µg/m³ @250/500/1000/2000m)</th><th>Evidence</th></tr></thead>
+          <tbody id="enfTable"></tbody>
+        </table>
+        <div class="trace-console" id="enfTrace"></div>
+      </div>
+    </div>
+
+    <!-- TAB: ADVISORY -->
+    <div class="tabcontent" id="tab-advisory">
+      <div class="section-title">
+        <div><div class="eyebrow">Agent 04</div><h2>Citizen Health Risk Advisory</h2>
+        <p>Ward-level advisory against a real vulnerability layer (schools/hospitals from OpenStreetMap).</p></div>
+      </div>
+      <div class="grid2">
+        <div class="panel">
+          <div class="row-between"><h2 style="margin:0;">Zone</h2><select id="advWardSelect"></select></div>
+          <div class="lang-toggle" id="langToggle"></div>
+          <div class="advisory-card">
+            <div class="msg" id="advisoryMsg">—</div>
+            <div class="meta"><span id="advisoryAqi">—</span><span id="advisoryGenBy">—</span></div>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>Vulnerability Layer</h2>
+          <p class="desc">Real OSM point-of-interest counts near this zone's coordinates.</p>
+          <div id="vulnList"></div>
+          <div class="trace-console" id="advTrace"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: VALIDATION -->
+    <div class="tabcontent" id="tab-validation">
+      <div class="section-title">
+        <div><div class="eyebrow">Evaluation Focus</div><h2>Source Attribution vs. Ground-Truth Emission Inventories</h2>
+        <p>Our city-wide averaged attribution, compared against a real, independently published source-apportionment study for this city.</p></div>
+      </div>
+      <div class="panel" id="validationPanel">
+        <div class="loading-inline">Loading — this aggregates real attribution across all 10 zones…</div>
+      </div>
+      <div class="trace-console" id="validationTrace"></div>
+    </div>
+
+    <!-- TAB: PIPELINE / RESPONSE TIME -->
+    <div class="tabcontent" id="tab-pipeline">
+      <div class="section-title">
+        <div><div class="eyebrow">Evaluation Focus</div><h2>Signal → Intervention Response Time</h2>
+        <p>A real, measured stopwatch on one full agent pipeline run for a single zone — not an animation.</p></div>
+      </div>
+      <div class="panel">
+        <div class="row-between">
+          <div>
+            <h2 style="margin:0;">Run the full pipeline for one zone</h2>
+            <p class="desc" style="margin:4px 0 0;">Data → Attribution → Forecast → Enforcement scoring → Advisory, executed live, timed end to end.</p>
+          </div>
+          <select id="pipelineWardSelect"></select>
+        </div>
+        <button class="btn" id="runPipelineBtn" style="margin-bottom:14px;">Run full pipeline now</button>
+        <div id="pipelineResult"></div>
+        <div class="trace-console" id="pipelineTrace"></div>
+      </div>
+    </div>
+
+    <div class="notebar">
+      Built for ET AI Hackathon 2.0 — Round 2 Build Sprint. Backend: FastAPI + 5 real public APIs (Open-Meteo weather &amp; CAMS-backed air quality, OSM Overpass land-use, NASA FIRMS satellite thermal anomalies, TomTom live traffic, OpenAQ ground stations) with a 6-agent multi-agent architecture (Data / Attribution / Forecast / Enforcement / Advisory / Validation, coordinated by an Orchestrator). Includes real wind-direction causal reasoning, a Holt-Winters forecasting model backtested against persistence, and a circuit breaker for graceful degradation when an external API is down. Every agent has an LLM reasoning hook (<span class="mono">reason_with_llm</span>) that activates automatically once <span class="mono">ANTHROPIC_API_KEY</span> is set — currently running in heuristic/statistical mode.
+    </div>
+  </div>
+</div>
+
+<script>
+const API_BASE = window.API_BASE || 'http://localhost:8000';
+
+const CATS = [
+  { max:50, key:'good', label:'Good' },{ max:100, key:'satisfactory', label:'Satisfactory' },
+  { max:200, key:'moderate', label:'Moderate' },{ max:300, key:'poor', label:'Poor' },
+  { max:400, key:'verypoor', label:'Very Poor' },{ max:Infinity, key:'severe', label:'Severe' },
+];
+function categoryOf(aqi){ return CATS.find(c => aqi <= c.max); }
+function cssVar(key){ return getComputedStyle(document.documentElement).getPropertyValue('--'+key).trim(); }
+
+let CITIES = [];
+let currentCity = null;
+let selectedWard = null;
+let fcChartInstance = null;
+
+async function api(path){
+  const res = await fetch(API_BASE + path);
+  if(!res.ok) throw new Error('API error ' + res.status + ' on ' + path);
+  return res.json();
+}
+
+function provenanceBadge(source){
+  const cls = source === 'live' ? 'live' : 'fallback';
+  const label = source === 'live' ? 'LIVE' : 'FALLBACK';
+  return `<span class="provenance ${cls}">● ${label}</span>`;
+}
+
+function renderTrace(elId, trace){
+  const el = document.getElementById(elId);
+  if(!trace || !trace.length){ el.innerHTML = '<div class="loading-inline">no trace yet</div>'; return; }
+  el.innerHTML = trace.map(t => {
+    const srcClass = t.source === 'live' ? 'src-live' : (t.source === 'fallback' ? 'src-fallback' : (t.source === 'not_configured' ? 'src-not_configured' : 'src-internal'));
+    return `<div class="trace-line"><span class="agent-tag">[${t.agent}]</span><span class="${srcClass}">${t.action} (${t.source})</span> — ${t.detail}</div>`;
+  }).join('');
+}
+
+async function checkBackend(){
+  const badge = document.getElementById('apiStatusBadge');
+  try{
+    const health = await api('/api/health');
+    badge.innerHTML = `<span class="dotstatus" style="background:var(--live);"></span> backend online${health.llm_enabled ? ' · LLM active' : ' · heuristic mode'}`;
+    badge.style.color = 'var(--live)';
+    return true;
+  }catch(e){
+    badge.innerHTML = `<span class="dotstatus" style="background:var(--severe);"></span> backend unreachable`;
+    badge.style.color = 'var(--severe)';
+    document.body.insertAdjacentHTML('afterbegin', `<div style="background:var(--severe);color:#fff;padding:10px 18px;font-size:13px;">Can't reach the backend at ${API_BASE}. Start it with: <code>uvicorn main:app --reload --port 8000</code> from the aqi-backend folder, then reload this page.</div>`);
+    return false;
+  }
+}
+
+async function init(){
+  const ok = await checkBackend();
+  if(!ok) return;
+  CITIES = await api('/api/cities');
+  currentCity = CITIES[0];
+  const sel = document.getElementById('citySelect');
+  sel.innerHTML = CITIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  sel.addEventListener('change', () => { currentCity = CITIES.find(c=>c.id===sel.value); selectedWard = currentCity.zones[0]; refreshAll(); });
+  selectedWard = currentCity.zones[0];
+  setupTabs();
+  refreshAll();
+}
+
+async function refreshAll(){
+  const overview = await loadOverviewAndGetData();
+  populateWardSelects();
+  renderWardMapFromOverview(overview);
+  loadForecast();
+  loadEnforcement();
+  loadAdvisory();
+}
+
+async function loadOverviewAndGetData(){
+  try{
+    const data = await api(`/api/city/${currentCity.id}/overview`);
+    const cat = categoryOf(data.overall_aqi);
+    document.getElementById('topAqiVal').textContent = data.overall_aqi;
+    document.getElementById('topAqiVal').style.color = cssVar(cat.key);
+    document.getElementById('topAqiCat').textContent = cat.label;
+    const chip = document.getElementById('topAqiChip');
+    chip.textContent = cat.label.toUpperCase();
+    chip.style.background = cssVar(cat.key)+'26'; chip.style.color = cssVar(cat.key);
+    const liveCount = data.zones.filter(z=>z.aqi_source==='live').length;
+    document.getElementById('topProvenance').innerHTML = provenanceBadge(liveCount > data.zones.length/2 ? 'live' : 'fallback')
+      + ` <span class="mono" style="font-size:10px;color:var(--text-faint);">${liveCount}/${data.zones.length} zones live</span>`;
+    return data;
+  }catch(e){ console.error(e); return null; }
+}
+
+function populateWardSelects(){
+  const opts = currentCity.zones.map(z => `<option value="${z}">${z}</option>`).join('');
+  document.getElementById('fcWardSelect').innerHTML = opts;
+  document.getElementById('advWardSelect').innerHTML = opts;
+  document.getElementById('pipelineWardSelect').innerHTML = opts;
+  document.getElementById('fcWardSelect').value = selectedWard;
+  document.getElementById('advWardSelect').value = selectedWard;
+  document.getElementById('pipelineWardSelect').value = selectedWard;
+  document.getElementById('fcWardSelect').onchange = () => loadForecast();
+  document.getElementById('advWardSelect').onchange = () => loadAdvisory();
+}
+
+function renderWardMapFromOverview(overview){
+  document.getElementById('attCityName').textContent = currentCity.name;
+  const mapEl = document.getElementById('wardMap');
+  if(!overview){ mapEl.innerHTML = '<div class="loading-inline">Failed to load — check backend logs.</div>'; return; }
+  const results = overview.zones;
+  mapEl.innerHTML = results.map((r) => {
+    if(!r) return '';
+    const cat = categoryOf(r.aqi);
+    const sel = selectedWard === r.zone ? 'selected' : '';
+    return `<div class="ward-cell ${sel}" style="background:${cssVar(cat.key)}" data-zone="${r.zone}">
+      <div class="wname">${r.zone}</div><div class="waqi">${r.aqi}</div><div class="wtag">${cat.label}</div>
+    </div>`;
+  }).join('');
+  [...mapEl.querySelectorAll('.ward-cell')].forEach(el => {
+    el.addEventListener('click', () => {
+      selectedWard = el.dataset.zone;
+      [...mapEl.querySelectorAll('.ward-cell')].forEach(c=>c.classList.remove('selected'));
+      el.classList.add('selected');
+      loadAttributionDetail(selectedWard);
+      populateWardSelects();
+    });
+  });
+  const currentZone = results.find(r => r && r.zone === selectedWard) ? selectedWard : (results[0] && results[0].zone);
+  if(currentZone) loadAttributionDetail(currentZone);
+}
+
+async function loadAttributionDetail(zone){
+  // Single lightweight call for just the clicked zone -- full detail
+  // (causal narrative, trace, etc.) only needs to exist for the zone
+  // the user is actually looking at, not all 10 at once.
+  document.getElementById('srcBars').innerHTML = '<div class="loading-inline">Loading zone detail…</div>';
+  try{
+    const r = await api(`/api/city/${currentCity.id}/zone/${encodeURIComponent(zone)}/attribution`);
+    showAttributionDetail(r);
+  }catch(e){ console.error(e); }
+}
+
+function showAttributionDetail(r){
+  if(!r) return;
+  const cat = categoryOf(r.aqi);
+  document.getElementById('attWardTitle').innerHTML = `${r.zone} — AQI ${r.aqi} ${provenanceBadge(r.aqi_source)}`;
+  document.getElementById('attWardSub').innerHTML = `
+    <div style="background:var(--panel2); border-left:3px solid var(--teal); border-radius:0 8px 8px 0; padding:12px 14px; margin-bottom:12px; font-size:13px; color:var(--text); line-height:1.6;">
+      ${r.causal_narrative}
+    </div>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+      <span class="evidence-chip">Wind: ${r.wind_compass} (${r.wind_direction_deg}°) @ ${r.wind_speed_kmh} km/h ${provenanceBadge(r.wind_source)}</span>
+      <span class="evidence-chip">Traffic congestion: ${r.traffic_congestion_pct ?? 'n/a'}% ${provenanceBadge(r.traffic_source)}</span>
+      <span class="evidence-chip">Thermal anomalies (15km): ${r.thermal_anomaly_count ?? 'n/a'} ${provenanceBadge(r.thermal_source)}</span>
+      ${r.station_reading && r.station_reading.station_name ? `<span class="evidence-chip">Station: ${r.station_reading.station_name} (${r.station_reading.station_distance_km}km) ${provenanceBadge(r.station_reading.source)}</span>` : ''}
+    </div>
+    <p class="desc" style="margin:0;">${cat.label} · ${r.signals.industrial_sites} industrial sites · ${r.signals.construction_sites} construction sites · ${r.signals.major_roads} major roads nearby (${r.landuse_source})</p>
+  `;
+  const colors = { Vehicular:'#4FD1C5', Construction:'#F2C94C', Industrial:'#EB5757', 'Biomass / Waste Burning':'#F2994A', 'Road & Fugitive Dust':'#A8D14F', 'Regional Transport':'#8FA0AD' };
+  document.getElementById('srcBars').innerHTML = Object.entries(r.shares).sort((a,b)=>b[1]-a[1]).map(([k,v]) => {
+    const pct = Math.round(v*100);
+    const conf = Math.round(r.confidence[k]*100);
+    return `<div class="src-bar"><div class="name">${k}</div><div class="track"><div class="fill" style="width:${pct}%;background:${colors[k]}"></div></div><div class="pct">${pct}%</div><div class="conf">conf ${conf}%</div></div>`;
+  }).join('');
+  renderTrace('attTrace', r.trace);
+}
+
+async function loadForecast(){
+  let zone = document.getElementById('fcWardSelect').value || selectedWard;
+  if(!currentCity.zones.includes(zone)) zone = currentCity.zones[0];
+  document.getElementById('fcWardName').textContent = zone;
+  try{
+    const d = await api(`/api/city/${currentCity.id}/zone/${encodeURIComponent(zone)}/forecast`);
+    if(d.backtest){
+      document.getElementById('fcRmseModel').textContent = d.backtest.rmse_model;
+      document.getElementById('fcRmseBase').textContent = d.backtest.rmse_persistence;
+      document.getElementById('fcImprove').textContent = d.backtest.improvement_pct + '%';
+    } else {
+      document.getElementById('fcRmseModel').textContent = 'n/a';
+      document.getElementById('fcRmseBase').textContent = 'n/a';
+      document.getElementById('fcImprove').textContent = 'insufficient history';
+    }
+    const forward = d.forward_forecast_72h;
+    const labels = forward.map((_,i)=> i%12===0 ? `${i}h` : '');
+    const ctx = document.getElementById('fcChart').getContext('2d');
+    if(fcChartInstance) fcChartInstance.destroy();
+    fcChartInstance = new Chart(ctx, {
+      type:'line',
+      data:{ labels, datasets:[
+        { label:`Forecast (${d.forecast_source})`, data:forward, borderColor:'#4FD1C5', backgroundColor:'rgba(79,209,197,0.08)', pointRadius:0, borderWidth:2.2, fill:true, tension:0.3 },
+      ]},
+      options:{ responsive:true, plugins:{ legend:{ labels:{ color:'#8FA0AD', font:{family:'Inter', size:11} } } },
+        scales:{ x:{ ticks:{ color:'#5C6E7A', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.03)' } },
+                 y:{ ticks:{ color:'#5C6E7A', font:{size:10} }, grid:{ color:'rgba(255,255,255,0.05)' } } } }
+    });
+    renderTrace('fcTrace', d.trace);
+  }catch(e){ console.error(e); }
+}
+
+async function loadEnforcement(){
+  document.getElementById('enfLoading').style.display = 'block';
+  document.getElementById('enfTableWrap').style.display = 'none';
+  try{
+    const d = await api(`/api/city/${currentCity.id}/enforcement`);
+    document.getElementById('enfTable').innerHTML = d.ranked_zones.map((r,i) => {
+      let evidenceHtml;
+      if(r.primary_target){
+        const t = r.primary_target;
+        evidenceHtml = `<a href="${t.osm_url}" target="_blank" style="color:var(--teal);text-decoration:none;font-weight:600;">
+          ${t.name} ↗</a><br><span style="color:var(--text-faint);font-size:10.5px;">${t.category}, ${t.distance_km}km ${t.compass_from_zone} · upwind now</span>`;
+      } else {
+        const refs = [...(r.industrial_refs||[]), ...(r.construction_refs||[])];
+        evidenceHtml = refs.length
+          ? refs.slice(0,2).map(ref => `<a href="${ref.osm_url}" target="_blank" class="evidence-chip" style="color:var(--teal);text-decoration:none;">${ref.name || (ref.osm_type+'/'+ref.osm_id)} ↗</a>`).join('')
+          : `<span class="evidence-chip">no specific upwind target · ${r.industrial_sites} industrial · ${r.construction_sites} construction (${provenanceBadge(r.evidence_source)})</span>`;
+      }
+      return `
+      <tr>
+        <td><span class="rank">${i+1}</span></td>
+        <td><b>${r.zone}</b><br><span class="mono" style="font-size:10.5px;color:var(--text-faint);">AQI ${r.aqi} ${provenanceBadge(r.aqi_source)}</span></td>
+        <td><span class="mono" style="font-size:14px;color:var(--teal);font-weight:600;">${r.score}</span></td>
+        <td>${r.top_source}</td>
+        <td class="mono" style="font-size:11px;">${r.plume_ug_m3_at_250_500_1000_2000m.join(' / ')}<br><span style="color:var(--text-faint);">wind ${r.wind_speed_ms} m/s, class ${r.stability_class} ${provenanceBadge(r.wind_source)}</span></td>
+        <td>${evidenceHtml}</td>
+      </tr>
+    `;}).join('');
+    document.getElementById('enfLoading').style.display = 'none';
+    document.getElementById('enfTableWrap').style.display = 'table';
+    renderTrace('enfTrace', d.trace);
+  }catch(e){ console.error(e); document.getElementById('enfLoading').textContent = 'Failed to load — check backend logs.'; }
+}
+
+async function loadAdvisory(){
+  let zone = document.getElementById('advWardSelect').value || selectedWard;
+  if(!currentCity.zones.includes(zone)) zone = currentCity.zones[0];
+  const langs = ['en', currentCity.lang];
+  const LANG_LABEL = { en:'English', hi:'हिंदी', mr:'मराठी', bn:'বাংলা', kn:'ಕನ್ನಡ', ta:'தமிழ்' };
+  let currentLang = window._advLang && langs.includes(window._advLang) ? window._advLang : 'en';
+  document.getElementById('langToggle').innerHTML = langs.map(l => `<button data-lang="${l}" class="${l===currentLang?'active':''}">${LANG_LABEL[l]}</button>`).join('');
+  [...document.querySelectorAll('#langToggle button')].forEach(b => b.addEventListener('click', () => { window._advLang = b.dataset.lang; loadAdvisory(); }));
+
+  try{
+    const d = await api(`/api/city/${currentCity.id}/zone/${encodeURIComponent(zone)}/advisory?lang=${currentLang}`);
+    document.getElementById('advisoryMsg').textContent = d.message;
+    document.getElementById('advisoryAqi').textContent = `AQI ${d.aqi} · ${d.category}`;
+    document.getElementById('advisoryGenBy').innerHTML = d.generated_by === 'llm'
+      ? '<span class="provenance live">● LLM-GENERATED</span>'
+      : (d.generated_by === 'template_llm_error'
+          ? '<span class="provenance fallback">● LLM CALL FAILED — TEMPLATE USED</span>'
+          : '<span class="provenance" style="color:var(--text-dim);border-color:var(--border);">● TEMPLATE (no LLM key configured)</span>');
+    document.getElementById('vulnList').innerHTML = `
+      <div class="stat" style="margin-bottom:8px;"><div class="k">Schools nearby ${provenanceBadge(d.vulnerability.source)}</div><div class="v">${d.vulnerability.schools}</div></div>
+      <div class="stat"><div class="k">Hospitals nearby ${provenanceBadge(d.vulnerability.source)}</div><div class="v">${d.vulnerability.hospitals}</div></div>
+    `;
+    renderTrace('advTrace', d.trace);
+  }catch(e){ console.error(e); }
+}
+
+async function loadValidation(){
+  const panel = document.getElementById('validationPanel');
+  panel.innerHTML = '<div class="loading-inline">Loading — aggregating real attribution across all 10 zones…</div>';
+  try{
+    const d = await api(`/api/city/${currentCity.id}/validation`);
+    if(!d.available){ panel.innerHTML = '<div class="loading-inline">No reference study registered for this city.</div>'; return; }
+    const rows = d.comparisons.map(c => {
+      if(c.status === 'no_independent_benchmark'){
+        return `<tr><td>${c.category}</td><td class="mono">${c.our_pct}%</td><td class="mono" style="color:var(--text-faint);">— no benchmark —</td><td>—</td></tr>`;
+      }
+      return `<tr><td>${c.category}</td><td class="mono">${c.our_pct}%</td><td class="mono">${c.published_pct}%</td><td class="mono" style="color:${c.absolute_error > 15 ? 'var(--verypoor)' : 'var(--good)'};">±${c.absolute_error} pts</td></tr>`;
+    }).join('');
+    panel.innerHTML = `
+      <div class="grid3" style="margin-bottom:16px;">
+        <div class="stat"><div class="k">Mean Absolute Error</div><div class="v">${d.mean_absolute_error_pct_points ?? 'n/a'}</div><div class="d">percentage points, on compared categories</div></div>
+        <div class="stat"><div class="k">Categories Compared</div><div class="v">${d.categories_compared} / ${d.categories_total}</div><div class="d">rest have no published city-wide benchmark</div></div>
+        <div class="stat"><div class="k">Reference Study</div><div class="v" style="font-size:13px;line-height:1.4;">${d.study}</div><div class="d">${d.study_pollutant}</div></div>
+      </div>
+      <table>
+        <thead><tr><th>Category</th><th>Our Model</th><th>Published Study</th><th>Absolute Error</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p class="desc" style="margin-top:14px;">${d.study_note} Full study: <a href="${d.study_url}" target="_blank" style="color:var(--teal);">${d.study_url}</a></p>
+      <p class="desc" style="color:var(--text-faint);">Published source-apportionment studies for Indian cities often disagree with each other by large margins depending on methodology and year — this comparison is against one credible published study, not an undisputed ground truth.</p>
+    `;
+    renderTrace('validationTrace', d.trace);
+  }catch(e){ console.error(e); panel.innerHTML = '<div class="loading-inline">Failed to load validation data.</div>'; }
+}
+
+function setupPipelineTab(){
+  document.getElementById('pipelineWardSelect').innerHTML = currentCity.zones.map(z => `<option value="${z}">${z}</option>`).join('');
+  document.getElementById('pipelineWardSelect').value = selectedWard;
+  document.getElementById('runPipelineBtn').onclick = runFullPipeline;
+}
+
+async function runFullPipeline(){
+  let zone = document.getElementById('pipelineWardSelect').value || selectedWard;
+  if(!currentCity.zones.includes(zone)) zone = currentCity.zones[0];
+  const resultEl = document.getElementById('pipelineResult');
+  const btn = document.getElementById('runPipelineBtn');
+  btn.disabled = true; btn.textContent = 'Running…';
+  const clientStart = performance.now();
+  resultEl.innerHTML = '<div class="loading-inline">Running Data → Attribution → Forecast → Enforcement → Advisory live…</div>';
+  try{
+    const d = await api(`/api/city/${currentCity.id}/zone/${encodeURIComponent(zone)}/pipeline?lang=${currentCity.lang}`);
+    const clientElapsed = ((performance.now() - clientStart) / 1000).toFixed(2);
+    resultEl.innerHTML = `
+      <div class="grid3" style="margin:14px 0;">
+        <div class="stat"><div class="k">Server-side Pipeline Time</div><div class="v" style="color:var(--teal);">${d.pipeline_seconds}s</div><div class="d">measured wall-clock, all 5 agent stages</div></div>
+        <div class="stat"><div class="k">Round-trip (incl. network)</div><div class="v">${clientElapsed}s</div><div class="d">as observed from this browser</div></div>
+        <div class="stat"><div class="k">Agent Steps Executed</div><div class="v">${d.steps}</div><div class="d">real trace entries, see console below</div></div>
+      </div>
+      <p class="desc">Result for <b>${d.zone}</b>: AQI ${d.stages.attribution_aqi}, dispersion stability class ${d.stages.dispersion_stability_class}, advisory generated by <b>${d.stages.advisory_generated_by}</b>. Manual multi-agency review of a single hotspot today typically takes hours to days — this automated pipeline just did signal → evidence-backed recommendation in ${d.pipeline_seconds} seconds.</p>
+    `;
+    renderTrace('pipelineTrace', d.trace);
+  }catch(e){ console.error(e); resultEl.innerHTML = '<div class="loading-inline">Pipeline run failed — check backend logs.</div>'; }
+  btn.disabled = false; btn.textContent = 'Run full pipeline now';
+}
+
+function setupTabs(){
+  [...document.querySelectorAll('.nav-item')].forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.nav-item').forEach(i=>i.classList.remove('active'));
+      item.classList.add('active');
+      document.querySelectorAll('.tabcontent').forEach(t=>t.classList.remove('active'));
+      document.getElementById('tab-'+item.dataset.tab).classList.add('active');
+      if(item.dataset.tab==='validation') loadValidation();
+      if(item.dataset.tab==='pipeline') setupPipelineTab();
+    });
+  });
+}
+
+init();
+</script>
+</body>
+</html>
