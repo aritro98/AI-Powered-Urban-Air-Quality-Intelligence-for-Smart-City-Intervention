@@ -85,7 +85,7 @@ flowchart TD
     ORCH --> TRACE[Shared trace log]
 ```
 
-### What this means
+### What this means?
 1. The **frontend** requests a city, zone, or workflow endpoint.
 2. The **FastAPI app** validates the request and delegates to the orchestrator.
 3. The **orchestrator** invokes the relevant agents.
@@ -362,10 +362,7 @@ Outputs are labelled as:
 
 This is important because it avoids misleading the user into believing all results are equally real-time.
 
-## Current limitations
-This repository is a hackathon prototype, not a production regulatory system.
-
-Known limitations:
+## Limitations
 - Some external data depends on optional API keys
 - Public APIs may rate-limit or time out
 - The dispersion model is simplified
