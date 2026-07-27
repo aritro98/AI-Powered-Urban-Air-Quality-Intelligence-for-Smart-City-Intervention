@@ -1,11 +1,9 @@
 # AQI-Sentinel API Reference
 
-## 1. Overview
-
+## Overview
 AQI-Sentinel exposes a small REST API through a FastAPI backend.
 
 Base URL during local development:
-
 ```text
 http://localhost:8000
 ```
@@ -14,13 +12,9 @@ All routes return JSON except the favicon endpoint.
 
 The API is intentionally thin. Request validation happens in `main.py`, and the actual work is delegated to the orchestrator and agents.
 
----
-
-## 2. Common response conventions
-
-### 2.1 Provenance fields
+## Common response conventions
+### 1. Provenance fields
 Many outputs include a `source` field with values such as:
-
 - `live`
 - `fallback`
 - `cache hit`
@@ -30,9 +24,8 @@ Many outputs include a `source` field with values such as:
 
 These values tell you whether the result came from a live API, a cached response, a deterministic fallback, or an internal computation step.
 
-### 2.2 Trace entries
+### 2. Trace entries
 Several endpoints return a `trace` list. Each trace item has this shape:
-
 ```json
 {
   "agent": "DataAgent",
@@ -43,11 +36,10 @@ Several endpoints return a `trace` list. Each trace item has this shape:
 }
 ```
 
-### 2.3 Error handling
+### 3. Error handling
 The API uses FastAPI `HTTPException` responses for invalid city or zone values.
 
 Common error response:
-
 ```json
 {
   "detail": "Unknown city 'foo'"
@@ -62,12 +54,9 @@ or
 }
 ```
 
----
-
-## 3. Endpoint summary
-
+## Endpoint summary
 | Method | Path | Purpose |
-|---|---|---|
+|----|----|----|
 | GET | `/favicon.ico` | Returns HTTP 204 |
 | GET | `/api/health` | Backend status and LLM mode |
 | GET | `/api/cities` | List all cities and zones |
@@ -79,12 +68,8 @@ or
 | GET | `/api/city/{city_id}/validation` | Validation against published studies |
 | GET | `/api/city/{city_id}/zone/{zone}/pipeline` | Full pipeline timing run |
 
----
-
-## 4. Endpoint details
-
-## 4.1 GET `/api/health`
-
+## Endpoint details
+## 1. GET `/api/health`
 Returns backend status plus the LLM toggle state.
 
 ### Response
@@ -98,10 +83,7 @@ Returns backend status plus the LLM toggle state.
 ### Notes
 - `llm_enabled` becomes `true` when `ANTHROPIC_API_KEY` is configured.
 
----
-
-## 4.2 GET `/api/cities`
-
+## 2. GET `/api/cities`
 Returns all available cities and their zones.
 
 ### Response shape
@@ -117,10 +99,10 @@ Returns all available cities and their zones.
 ```
 
 ### Fields
-- `id` — internal city identifier
-- `name` — display name
-- `lang` — default language code for the city
-- `zones` — list of zone names
+- `id` — Internal city identifier
+- `name` — Display name
+- `lang` — Default language code for the city
+- `zones` — List of zone names
 
 ### Supported city IDs
 - `delhi`
@@ -129,14 +111,11 @@ Returns all available cities and their zones.
 - `bengaluru`
 - `chennai`
 
----
-
-## 4.3 GET `/api/city/{city_id}/overview`
-
+## 3. GET `/api/city/{city_id}/overview`
 Returns a city-level summary built from all zones.
 
 ### Path parameters
-- `city_id` — one of the supported city IDs
+- `city_id` — One of the supported city IDs
 
 ### Response shape
 ```json
@@ -149,19 +128,16 @@ Returns a city-level summary built from all zones.
 ```
 
 ### Response fields
-- `city` — display name
-- `overall_aqi` — rounded average AQI across the city’s zones
-- `zones` — list of zone-level attribution results
-- `trace` — execution trace for the overview run
+- `city` — Display name
+- `overall_aqi` — Rounded average AQI across the city’s zones
+- `zones` — List of zone-level attribution results
+- `trace` — Execution trace for the overview run
 
 ### Notes
 - The city average is computed from the attribution result of each zone.
 - Zone processing is parallelised.
 
----
-
-## 4.4 GET `/api/city/{city_id}/zone/{zone}/attribution`
-
+## 4. GET `/api/city/{city_id}/zone/{zone}/attribution`
 Returns detailed source attribution for a single zone.
 
 ### Path parameters
@@ -217,20 +193,17 @@ Returns detailed source attribution for a single zone.
 ```
 
 ### Important fields
-- `shares` — category-level source contributions
-- `confidence` — per-category confidence estimates
-- `causal_narrative` — readable explanation
-- `upwind_sources` — list of real nearby candidate sources
-- `signals` — compact summary of the raw indicators
+- `shares` — Category-level source contributions
+- `confidence` — Per-category confidence estimates
+- `causal_narrative` — Readable explanation
+- `upwind_sources` — List of real nearby candidate sources
+- `signals` — Compact summary of the raw indicators
 
 ### Notes
 - This endpoint uses live data where available.
 - If live data is unavailable, the endpoint still returns a structured fallback response.
 
----
-
-## 4.5 GET `/api/city/{city_id}/zone/{zone}/forecast`
-
+## 5. GET `/api/city/{city_id}/zone/{zone}/forecast`
 Returns a hyperlocal 72-hour forecast and backtest information.
 
 ### Query parameters
@@ -259,20 +232,17 @@ Returns a hyperlocal 72-hour forecast and backtest information.
 
 ### Response fields
 - `zone`
-- `data_source` — live or fallback AQI source
-- `forecast_source` — human-readable description of forecast source
-- `forward_forecast_72h` — list of future AQI values
-- `history_used_for_backtest` — number of hourly points used for validation
+- `data_source` — Live or fallback AQI source
+- `forecast_source` — Ouman-readable description of forecast source
+- `forward_forecast_72h` — List of future AQI values
+- `history_used_for_backtest` — Number of hourly points used for validation
 - `backtest` — RMSE comparison data, or `null` when history is insufficient
 
 ### Notes
 - If there is not enough history, the backtest may be `null`.
 - The forecast endpoint uses Open-Meteo AQ quality data for the forward horizon and the internal time-series model for backtesting.
 
----
-
-## 4.6 GET `/api/city/{city_id}/enforcement`
-
+## 6. GET `/api/city/{city_id}/enforcement`
 Returns all zones ranked by enforcement priority.
 
 ### Path parameters
@@ -315,18 +285,15 @@ Returns all zones ranked by enforcement priority.
 ```
 
 ### Response fields
-- `ranked_zones` — sorted by descending score
-- `score` — priority score derived from severity, confidence, and exposure proxy
-- `primary_target` — the closest currently upwind real source when one is available
+- `ranked_zones` — Sorted by descending score
+- `score` — Priority score derived from severity, confidence, and exposure proxy
+- `primary_target` — The closest currently upwind real source when one is available
 
 ### Notes
 - The system does not invent a target when one cannot be supported by live data.
 - If no upwind source is identified, `primary_target` is `null`.
 
----
-
-## 4.7 GET `/api/city/{city_id}/zone/{zone}/advisory`
-
+## 7. GET `/api/city/{city_id}/zone/{zone}/advisory`
 Returns a short citizen advisory for a specific zone.
 
 ### Path parameters
@@ -334,7 +301,7 @@ Returns a short citizen advisory for a specific zone.
 - `zone`
 
 ### Query parameters
-- `lang` — optional language code, default `en`
+- `lang` — Optional language code, default `en`
 
 ### Supported language codes
 - `en`
@@ -367,19 +334,16 @@ Returns a short citizen advisory for a specific zone.
 - `lang`
 - `aqi`
 - `category` — AQI category band
-- `message` — advisory text
+- `message` — Advisory text
 - `generated_by` — `llm`, `template_no_key`, or `template_llm_error`
-- `vulnerability` — schools and hospitals near the zone
+- `vulnerability` — Schools and hospitals near the zone
 
 ### Notes
 - If Claude is configured, the advisory can be generated by the LLM.
 - If not, the template fallback is used.
 - The advisory is intentionally short and actionable.
 
----
-
-## 4.8 GET `/api/city/{city_id}/validation`
-
+## 8. GET `/api/city/{city_id}/validation`
 Compares the city-level attribution pattern against a published benchmark study.
 
 ### Path parameters
@@ -417,23 +381,20 @@ Compares the city-level attribution pattern against a published benchmark study.
 ```
 
 ### Response fields
-- `available` — whether a benchmark exists for the city
-- `study` — title of the published study
-- `study_url` — source URL
-- `study_pollutant` — pollutant used in the comparison
-- `study_note` — benchmark caveat
-- `categories_compared` — count of categories with overlap
-- `categories_total` — total categories produced by the model
+- `available` — Whether a benchmark exists for the city
+- `study` — Title of the published study
+- `study_url` — Source URL
+- `study_pollutant` — Pollutant used in the comparison
+- `study_note` — Benchmark caveat
+- `categories_compared` — Count of categories with overlap
+- `categories_total` — Total categories produced by the model
 - `mean_absolute_error_pct_points` — MAE over comparable categories
-- `comparisons` — per-category comparison rows
+- `comparisons` — Per-category comparison rows
 
 ### Notes
 - If the city has no registered benchmark, the endpoint returns `{"available": false}`.
 
----
-
-## 4.9 GET `/api/city/{city_id}/zone/{zone}/pipeline`
-
+## 9. GET `/api/city/{city_id}/zone/{zone}/pipeline`
 Runs the full intervention pipeline for a single zone and measures wall-clock latency.
 
 ### Path parameters
@@ -461,53 +422,43 @@ Runs the full intervention pipeline for a single zone and measures wall-clock la
 ```
 
 ### Response fields
-- `pipeline_seconds` — wall-clock time for the full pipeline
-- `trace_span_seconds` — time between the first and last trace entry
-- `steps` — number of logged trace events
-- `stages` — summary of the major sub-stages
-- `trace` — detailed execution log
+- `pipeline_seconds` — Wall-clock time for the full pipeline
+- `trace_span_seconds` — Time between the first and last trace entry
+- `steps` — Number of logged trace events
+- `stages` — Summary of the major sub-stages
+- `trace` — Detailed execution log
 
 ### Notes
 This endpoint is the closest thing in the prototype to a “signal-to-intervention” latency benchmark.
 
----
-
-## 5. Error responses
-
-### 5.1 Unknown city
+## Error responses
+### 1. Unknown city
 ```json
 {
   "detail": "Unknown city 'abc'"
 }
 ```
 
-### 5.2 Unknown zone
+### 2. Unknown zone
 ```json
 {
   "detail": "Unknown zone 'foo' for city 'delhi'"
 }
 ```
 
-### 5.3 Typical status codes
+### 3. Typical status codes
 - `200 OK` — successful request
 - `204 No Content` — favicon
 - `404 Not Found` — unknown city or zone
 - `500 Internal Server Error` — unexpected application failure
 
----
-
-## 6. CORS behaviour
-
+## CORS behaviour
 The backend currently allows all origins, methods, and headers for hackathon/demo use.
 
 That is defined in `main.py` and is intended for local development and submission-time testing.
 
----
-
-## 7. Suggested integration order
-
+## Suggested integration order
 If you are consuming the API from the frontend or another client, the recommended request sequence is:
-
 1. `GET /api/health`
 2. `GET /api/cities`
 3. `GET /api/city/{city_id}/overview`
@@ -520,20 +471,16 @@ If you are consuming the API from the frontend or another client, the recommende
 
 This order mirrors how the dashboard typically reveals the system.
 
----
-
-## 8. Summary
-
+## Summary
 AQI-Sentinel’s API is intentionally compact but expressive.
 
 It provides everything the frontend needs for:
-
-- city overview
-- explainable attribution
-- forecasting
-- enforcement ranking
-- citizen advisories
-- validation
-- response-time benchmarking
+- City overview
+- Explainable attribution
+- Forecasting
+- Enforcement ranking
+- Citizen advisories
+- Validation
+- Response-time benchmarking
 
 The contract is simple: each endpoint returns structured JSON with clear provenance and traceability.
